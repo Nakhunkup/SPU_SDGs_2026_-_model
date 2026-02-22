@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Report & Contribute — Ocean Guardian</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .report-page {
+            padding: calc(var(--nav-height) + 20px) 20px 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .report-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 750px) {
+            .report-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-card {
+            padding: 28px;
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .cat-btn {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1.5px solid var(--glass-border);
+            background: rgba(2, 13, 26, 0.4);
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .cat-btn:hover {
+            border-color: var(--teal-bright);
+            color: var(--teal-bright);
+        }
+
+        .cat-btn.selected {
+            border-color: var(--teal-bright);
+            background: var(--teal-soft);
+            color: var(--teal-bright);
+        }
+
+        .location-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .location-row .form-input {
+            flex: 1;
+        }
+
+        .photo-upload {
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .photo-upload:hover {
+            border-color: var(--teal-bright);
+        }
+
+        .photo-preview {
+            display: none;
+            width: 100%;
+            border-radius: 10px;
+            margin-top: 10px;
+            object-fit: cover;
+            max-height: 180px;
+        }
+
+        .feed-card {
+            padding: 20px;
+        }
+
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+        }
+
+        .report-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 500px) {
+            .report-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .report-stat-card {
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .report-stat-num {
+            font-size: 1.6rem;
+            font-weight: 800;
+        }
+
+        .report-stat-lbl {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-top: 2px;
+        }
+
+        #mini-map {
+            height: 180px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ocean-bg"></div>
+    <div class="particles"></div>
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">
+            <div class="nav-logo-icon">🌊</div><span class="nav-logo-text">Ocean Guardian</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="map.html">🗺️ Beach Map</a></li>
+            <li><a href="scanner.html">📷 Scanner</a></li>
+            <li><a href="report.html" class="active">📝 Report</a></li>
+            <li><a href="alert.html">🚨 Alerts</a></li>
+        </ul>
+        <div class="nav-status">
+            <div class="status-dot"></div>Crowdsourcing Live
+        </div>
+    </nav>
+
+    <div class="report-page">
+        <div class="section-header" style="text-align:left; margin-bottom:20px;">
+            <div class="section-tag">📝 Report & Contribute</div>
+            <h1 class="section-title" style="font-size:2rem;">Crowdsource Report</h1>
+            <p class="section-desc" style="text-align:left; margin:0;">รายงานขยะ สัตว์หายาก หรือจุดอันตราย เพื่อสร้าง
+                Big Data ฟื้นฟูระบบนิเวศทะเล</p>
+        </div>
+
+        <div class="report-stats">
+            <div class="report-stat-card glass-card">
+                <div class="report-stat-num" style="color:var(--coral);">1,284</div>
+                <div class="report-stat-lbl">♻️ Trash Reports</div>
+            </div>
+            <div class="report-stat-card glass-card">
+                <div class="report-stat-num" style="color:#a78bfa;">342</div>
+                <div class="report-stat-lbl">🐢 Rare Species</div>
+            </div>
+            <div class="report-stat-card glass-card">
+                <div class="report-stat-num" style="color:var(--amber);">198</div>
+                <div class="report-stat-lbl">⚠️ Hazards</div>
+            </div>
+            <div class="report-stat-card glass-card">
+                <div class="report-stat-num" style="color:var(--green-safe);">892</div>
+                <div class="report-stat-lbl">✅ Resolved</div>
+            </div>
+        </div>
+
+        <div class="report-layout">
+            <div class="glass-card form-card">
+                <div style="font-size:1rem; font-weight:700; margin-bottom:20px;">📋 รายงานใหม่</div>
+                <div class="form-group">
+                    <div class="form-label">ประเภท</div>
+                    <div class="category-grid">
+                        <button class="cat-btn selected" data-cat="trash" onclick="selectCat(this)">♻️ ขยะ /
+                            มลพิษ</button>
+                        <button class="cat-btn" data-cat="rare" onclick="selectCat(this)">🐢 สัตว์หายาก</button>
+                        <button class="cat-btn" data-cat="hazard" onclick="selectCat(this)">⚠️ จุดอันตราย</button>
+                        <button class="cat-btn" data-cat="other" onclick="selectCat(this)">📢 อื่นๆ</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">📍 พิกัด</label>
+                    <div class="location-row">
+                        <input class="form-input" id="loc-input" type="text"
+                            placeholder="กด 'รับพิกัด' หรือพิมพ์ชื่อสถานที่" />
+                        <button class="btn btn-secondary btn-sm" id="get-loc-btn" onclick="detectLocation()">📍
+                            รับพิกัด</button>
+                    </div>
+                    <div id="mini-map"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="desc-input">📝 รายละเอียด</label>
+                    <textarea class="form-textarea" id="desc-input"
+                        placeholder="อธิบายสิ่งที่พบ ปริมาณ ลักษณะ..."></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="form-label">📸 รูปภาพ</div>
+                    <div class="photo-upload" onclick="document.getElementById('photo-input').click()">
+                        <div style="font-size:2rem;">📷</div>
+                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:6px;">คลิกเพื่อเลือกรูปภาพ
+                        </div>
+                        <input type="file" id="photo-input" accept="image/*" style="display:none;"
+                            onchange="previewPhoto(this)" />
+                    </div>
+                    <img id="photo-preview" class="photo-preview" alt="Preview" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="reporter-input">👤 ชื่อผู้รายงาน (ไม่บังคับ)</label>
+                    <input class="form-input" id="reporter-input" type="text" placeholder="นักท่องเที่ยว / อาสาสมัคร" />
+                </div>
+                <button class="btn btn-primary btn-full" onclick="submitReport()">✅ ส่งรายงาน</button>
+            </div>
+
+            <div class="glass-card feed-card">
+                <div class="feed-header">
+                    <div>
+                        <div style="font-size:1rem; font-weight:700;">🌍 Community Feed</div>
+                        <div style="font-size:0.78rem; color:var(--text-muted);" id="feed-count">กำลังโหลด...</div>
+                    </div>
+                    <div
+                        style="display:inline-flex; align-items:center; gap:6px; color:var(--green-safe); font-size:0.78rem; font-weight:600;">
+                        <div class="status-dot"></div>Live
+                    </div>
+                </div>
+                <div id="report-feed" style="overflow-y:auto; max-height:600px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="index.html" class="bottom-nav-item"><span class="icon">🏠</span>Home</a>
+        <a href="map.html" class="bottom-nav-item"><span class="icon">🗺️</span>Map</a>
+        <a href="scanner.html" class="bottom-nav-item"><span class="icon">📷</span>Scan</a>
+        <a href="report.html" class="bottom-nav-item active"><span class="icon">📝</span>Report</a>
+        <a href="alert.html" class="bottom-nav-item"><span class="icon">🚨</span>Alerts</a>
+    </nav>
+
+    <script src="script.js"></script>
+    <script>
+        let selectedCat = 'trash';
+        let userLat = null, userLng = null;
+        let miniMap = null;
+
+        const SAMPLE_REPORTS = [
+            { cat: 'trash', emoji: '♻️', reporter: 'อาสาสมัคร A', location: 'หาดป่าตอง ภูเก็ต', desc: 'พบขยะพลาสติกปริมาณมากบริเวณแนวน้ำ ประมาณ 20-30 ถุงใหญ่', time: new Date(Date.now() - 600000).toISOString(), status: 'reported' },
+            { cat: 'rare', emoji: '🐢', reporter: 'นักท่องเที่ยว', location: 'หาดไม้ขาว ภูเก็ต', desc: 'พบเต่ากระกำลังวางไข่ 3 ตัว ช่วงค่ำ', time: new Date(Date.now() - 3600000).toISOString(), status: 'verified' },
+            { cat: 'hazard', emoji: '⚠️', reporter: 'ชาวบ้าน', location: 'หาดเฉวง เกาะสมุย', desc: 'พบกระแสน้ำดูดรุนแรงบริเวณปลายหาดทิศเหนือ', time: new Date(Date.now() - 7200000).toISOString(), status: 'urgent' },
+            { cat: 'trash', emoji: '♻️', reporter: 'อาสาสมัคร B', location: 'อ่าวนาง กระบี่', desc: 'ขยะประมง: เชือก อวน ทุ่น รวม ~50 กิโลกรัม', time: new Date(Date.now() - 14400000).toISOString(), status: 'resolved' },
+            { cat: 'rare', emoji: '🐬', reporter: 'นักดำน้ำ', location: 'เกาะช้าง', desc: 'พบโลมาอิรวดี 5 ตัว บริเวณอ่าวคลองสน', time: new Date(Date.now() - 18000000).toISOString(), status: 'verified' },
+        ];
+
+        const statusBadge = { reported: 'badge-info', verified: 'badge-safe', urgent: 'badge-danger', resolved: 'badge-warning' };
+        const statusLabel = { reported: '📤 แจ้งแล้ว', verified: '✅ ยืนยัน', urgent: '🚨 เร่งด่วน', resolved: '✔️ แก้ไขแล้ว' };
+        const catColor = { trash: 'rgba(255,107,107,0.15)', rare: 'rgba(124,58,237,0.15)', hazard: 'rgba(255,183,3,0.15)', other: 'rgba(0,212,212,0.1)' };
+
+        function renderFeed() {
+            const all = [...getReports(), ...SAMPLE_REPORTS];
+            document.getElementById('feed-count').textContent = all.length + ' รายงาน';
+            const feed = document.getElementById('report-feed');
+            feed.innerHTML = '';
+            all.forEach(r => {
+                const d = document.createElement('div');
+                d.className = 'report-feed-item';
+                d.innerHTML = `<div class="report-avatar" style="background:${catColor[r.cat] || 'rgba(0,212,212,0.1)'};">${r.emoji || '📝'}</div>
+          <div style="flex:1;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px;">
+              <span style="font-size:0.88rem;font-weight:600;">${r.reporter || 'ผู้ใช้งาน'}</span>
+              <span class="badge ${statusBadge[r.status] || 'badge-info'}">${statusLabel[r.status] || '📤 แจ้งแล้ว'}</span>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-secondary);">📍 ${r.location}</div>
+            <div style="font-size:0.82rem;margin:4px 0;line-height:1.5;">${r.desc}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);">${timeAgo(r.time)}</div>
+          </div>`;
+                feed.appendChild(d);
+            });
+        }
+
+        function selectCat(btn) {
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedCat = btn.dataset.cat;
+        }
+
+        function detectLocation() {
+            document.getElementById('get-loc-btn').textContent = '⏳';
+            getLocation((pos, err) => {
+                document.getElementById('get-loc-btn').textContent = '📍 รับพิกัด';
+                const lat = pos ? pos.lat : 7.897, lng = pos ? pos.lng : 98.296;
+                userLat = lat; userLng = lng;
+                document.getElementById('loc-input').value = pos ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : 'หาดป่าตอง ภูเก็ต (Demo)';
+                const mapEl = document.getElementById('mini-map');
+                mapEl.style.display = 'block';
+                if (miniMap) miniMap.remove();
+                miniMap = L.map('mini-map', { zoomControl: false, dragging: false }).setView([lat, lng], 13);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '' }).addTo(miniMap);
+                L.circleMarker([lat, lng], { color: '#00d4d4', fillColor: '#00d4d4', fillOpacity: 0.8, radius: 10 }).addTo(miniMap);
+                showToast(pos ? '📍 รับพิกัดสำเร็จ!' : '📍 ใช้พิกัด Demo', pos ? 'success' : 'warning');
+            });
+        }
+
+        function previewPhoto(input) {
+            if (!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = e => { const img = document.getElementById('photo-preview'); img.src = e.target.result; img.style.display = 'block'; };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function submitReport() {
+            const desc = document.getElementById('desc-input').value.trim();
+            const loc = document.getElementById('loc-input').value.trim();
+            if (!desc) { showToast('❌ กรุณาใส่รายละเอียด', 'error'); return; }
+            if (!loc) { showToast('❌ กรุณาระบุพิกัด', 'error'); return; }
+            const icons = { trash: '♻️', rare: '🐢', hazard: '⚠️', other: '📢' };
+            saveReport({ cat: selectedCat, emoji: icons[selectedCat], reporter: document.getElementById('reporter-input').value || 'ผู้ใช้งาน', location: loc, desc, status: 'reported' });
+            renderFeed();
+            document.getElementById('desc-input').value = '';
+            document.getElementById('reporter-input').value = '';
+            document.getElementById('loc-input').value = '';
+            document.getElementById('photo-preview').style.display = 'none';
+            document.getElementById('mini-map').style.display = 'none';
+            showToast('✅ ส่งรายงานสำเร็จ! ขอบคุณที่ช่วยรักษ์ทะเล 🌊', 'success');
+        }
+
+        renderFeed();
+    </script>
+</body>
+
+</html>

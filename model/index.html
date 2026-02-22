@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ocean Guardian — Beach Safety Platform</title>
+  <meta name="description" content="ระบบความปลอดภัยชายหาดแบบ Real-time สำหรับนักท่องเที่ยวและผู้รักธรรมชาติทางทะเล" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,180,180,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 20% 70%, rgba(0,80,180,0.08) 0%, transparent 50%);
+      z-index: 0;
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,212,212,0.1);
+      border: 1px solid rgba(0,212,212,0.3);
+      color: var(--teal-bright);
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      animation: fade-up 0.6s ease 0.2s both;
+    }
+    .hero-title {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 800;
+      line-height: 1.05;
+      margin-bottom: 10px;
+      animation: fade-up 0.6s ease 0.4s both;
+    }
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #00d4d4, #00e5ff, #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-subtitle {
+      font-size: clamp(1.1rem, 3vw, 1.4rem);
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      font-family: 'Inter', sans-serif;
+      animation: fade-up 0.6s ease 0.5s both;
+    }
+    .hero-desc {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 540px;
+      margin: 0 auto 48px;
+      line-height: 1.7;
+      animation: fade-up 0.6s ease 0.6s both;
+    }
+    .hero-cta {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 80px;
+      animation: fade-up 0.6s ease 0.7s both;
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* LIVE STATS BAR */
+    .stats-bar {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      animation: fade-up 0.6s ease 0.9s both;
+    }
+    .stats-bar-inner {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--glass-border);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+    .stat-item {
+      background: var(--glass-bg);
+      padding: 20px 16px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+    .stat-item .num { font-size: 1.8rem; font-weight: 800; color: var(--teal-bright); }
+    .stat-item .lbl { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+    @media (max-width: 600px) {
+      .stats-bar-inner { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* FEATURES SECTION */
+    .features-section {
+      padding: 100px 24px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .feature-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .feature-cards { grid-template-columns: 1fr; }
+      .features-section { padding: 60px 16px 40px; }
+    }
+    .feature-card {
+      padding: 32px;
+      border-radius: 20px;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 16px 50px rgba(0,0,0,0.5); }
+    .feature-card:hover::before { opacity: 1; }
+    .fc-1::before { background: radial-gradient(ellipse at top left, rgba(0,212,212,0.12), transparent 60%); }
+    .fc-2::before { background: radial-gradient(ellipse at top left, rgba(124,58,237,0.12), transparent 60%); }
+    .fc-3::before { background: radial-gradient(ellipse at top left, rgba(0,229,255,0.1), transparent 60%); }
+    .fc-4::before { background: radial-gradient(ellipse at top left, rgba(255,107,107,0.1), transparent 60%); }
+    .fc-1:hover { border-color: rgba(0,212,212,0.4); }
+    .fc-2:hover { border-color: rgba(124,58,237,0.4); }
+    .fc-3:hover { border-color: rgba(0,229,255,0.4); }
+    .fc-4:hover { border-color: rgba(255,107,107,0.4); }
+    .feature-icon-wrap {
+      width: 60px; height: 60px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+    }
+    .feature-num {
+      position: absolute;
+      top: 24px; right: 24px;
+      font-size: 4rem;
+      font-weight: 900;
+      color: rgba(255,255,255,0.03);
+      line-height: 1;
+    }
+    .feature-tag { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+    .feature-title { font-size: 1.4rem; font-weight: 700; line-height: 1.3; }
+    .feature-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7; font-family: 'Inter', sans-serif; }
+    .feature-arrow { margin-top: auto; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+    /* HOW IT WORKS */
+    .how-section {
+      padding: 80px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+      position: relative;
+    }
+    .steps-grid::before {
+      content: '';
+      position: absolute;
+      top: 28px; left: 12.5%; right: 12.5%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--teal-soft), var(--teal-soft), transparent);
+    }
+    .step-item { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .step-num {
+      width: 56px; height: 56px;
+      background: var(--glass-bg);
+      border: 2px solid var(--glass-border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--teal-bright);
+      position: relative;
+      z-index: 1;
+      backdrop-filter: blur(5px);
+    }
+    .step-title { font-weight: 700; font-size: 0.95rem; }
+    .step-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+
+    @media (max-width: 768px) {
+      .steps-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps-grid::before { display: none; }
+    }
+
+    /* FOOTER */
+    .footer {
+      border-top: 1px solid var(--glass-border);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .footer-logo {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--teal-bright), var(--aqua));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="ocean-bg"></div>
+  <div class="particles"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-logo">
+      <div class="nav-logo-icon">🌊</div>
+      <span class="nav-logo-text">Ocean Guardian</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="map.html">🗺️ Beach Map</a></li>
+      <li><a href="scanner.html">📷 Scanner</a></li>
+      <li><a href="report.html">📝 Report</a></li>
+      <li><a href="alert.html">🚨 Alerts</a></li>
+    </ul>
+    <div class="nav-status">
+      <div class="status-dot"></div>
+      Live Monitoring
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <div class="hero-badge">🌊 &nbsp; Real-time Beach Safety Platform</div>
+      <h1 class="hero-title">
+        <span class="gradient-text">Ocean</span><br>Guardian
+      </h1>
+      <p class="hero-subtitle">สำรวจทะเลอย่างปลอดภัย · รักษ์ระบบนิเวศ · เชื่อมชุมชน</p>
+      <p class="hero-desc">แพลตฟอร์มที่รวม Live Beach Map, AI สแกนสัตว์ทะเล, ระบบรายงานชุมชน และการแจ้งเตือนภัยแบบ Real-time ไว้ในที่เดียว</p>
+      <div class="hero-cta">
+        <a href="map.html" class="btn btn-primary">🗺️ เปิดแผนที่ Live</a>
+        <a href="scanner.html" class="btn btn-secondary">📷 สแกนสัตว์ทะเล</a>
+      </div>
+      <div class="stats-bar">
+        <div class="stats-bar-inner">
+          <div class="stat-item">
+            <div class="num" id="stat-beaches">142</div>
+            <div class="lbl">Beaches Monitored</div>
+          </div>
+          <div class="stat-item">
+            <div class="num" id="stat-users">24.8K</div>
+            <div class="lbl">Active Users</div>
+          </div>
+          <div class="stat-item">
+            <div class="num" id="stat-reports">3,891</div>
+            <div class="lbl">Reports This Month</div>
+          </div>
+          <div class="stat-item">
+            <div class="num" id="stat-saved">218</div>
+            <div class="lbl">Lives Saved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features-section">
+    <div class="section-header">
+      <div class="section-tag">✦ Core Features</div>
+      <h2 class="section-title">4 ระบบปกป้องคุณ</h2>
+      <p class="section-desc">ครบทุกสิ่งที่นักท่องเที่ยวทางทะเลต้องการ ตั้งแต่ก่อนลงน้ำ จนถึงการฟื้นฟูระบบนิเวศ</p>
+    </div>
+    <div class="feature-cards">
+      <!-- Card 1: Map -->
+      <a href="map.html" class="feature-card fc-1">
+        <div class="feature-num">01</div>
+        <div class="feature-icon-wrap" style="background:rgba(0,212,212,0.15);">🗺️</div>
+        <div>
+          <div class="feature-tag" style="color:var(--teal-bright);">Check & Plan</div>
+          <div class="feature-title">Live Beach Map</div>
+        </div>
+        <p class="feature-desc">ดูจุดเสี่ยง Rip Current, ระดับ UV, ความสูงคลื่น และสภาพอากาศทะเล แบบ Real-time บนแผนที่สด</p>
+        <div class="feature-arrow" style="color:var(--teal-bright);">เปิดแผนที่ <span>→</span></div>
+      </a>
+
+      <!-- Card 2: Scanner -->
+      <a href="scanner.html" class="feature-card fc-2">
+        <div class="feature-num">02</div>
+        <div class="feature-icon-wrap" style="background:rgba(124,58,237,0.15);">📷</div>
+        <div>
+          <div class="feature-tag" style="color:#a78bfa;">Scan & Protect</div>
+          <div class="feature-title">AI Marine Scanner</div>
+        </div>
+        <p class="feature-desc">สแกนสัตว์ทะเล AI เพื่อระบุสายพันธุ์ ระดับอันตราย และคำแนะนำปฐมพยาบาลเฉพาะสาย</p>
+        <div class="feature-arrow" style="color:#a78bfa;">เปิดกล้อง <span>→</span></div>
+      </a>
+
+      <!-- Card 3: Report -->
+      <a href="report.html" class="feature-card fc-3">
+        <div class="feature-num">03</div>
+        <div class="feature-icon-wrap" style="background:rgba(0,229,255,0.1);">📝</div>
+        <div>
+          <div class="feature-tag" style="color:var(--aqua);">Report & Contribute</div>
+          <div class="feature-title">Crowdsource Report</div>
+        </div>
+        <p class="feature-desc">รายงานขยะ สัตว์หายาก หรือจุดอันตราย ช่วยสร้าง Big Data เพื่อฟื้นฟูระบบนิเวศทะเล</p>
+        <div class="feature-arrow" style="color:var(--aqua);">รายงานตอนนี้ <span>→</span></div>
+      </a>
+
+      <!-- Card 4: Alerts -->
+      <a href="alert.html" class="feature-card fc-4">
+        <div class="feature-num">04</div>
+        <div class="feature-icon-wrap" style="background:rgba(255,107,107,0.12);">🚨</div>
+        <div>
+          <div class="feature-tag" style="color:var(--coral);">Real-time Alert</div>
+          <div class="feature-title">Alert &amp; Notify</div>
+        </div>
+        <p class="feature-desc">รับการแจ้งเตือนภัยทันทีผ่านสมาร์ทโฟนและ Smart Watch เมื่อตรวจพบความเสี่ยงในระยะใกล้</p>
+        <div class="feature-arrow" style="color:var(--coral);">ดูการแจ้งเตือน <span>→</span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section">
+    <div class="section-tag">✦ How It Works</div>
+    <h2 class="section-title">ใช้งานง่าย 4 ขั้นตอน</h2>
+    <div class="steps-grid">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-title">เช็กแผนที่</div>
+        <div class="step-desc">เปิด Beach Map ดูสภาพชายหาดก่อนลงน้ำ</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-title">สแกนสัตว์</div>
+        <div class="step-desc">ถ่ายภาพ AI ระบุสายพันธุ์และอันตราย</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-title">รายงาน</div>
+        <div class="step-desc">แชร์ข้อมูลขยะหรือสัตว์หายากให้ชุมชน</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-title">รับแจ้งเตือน</div>
+        <div class="step-desc">เปิดการแจ้งเตือนรับข้อมูลภัยทันที</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-logo">🌊 Ocean Guardian</div>
+    <p>ปกป้องชีวิต · รักษ์ทะเล · เชื่อมชุมชน</p>
+    <p style="margin-top:8px; font-size:0.75rem;">© 2026 Ocean Guardian Platform. Built for hackathon.</p>
+  </footer>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="bottom-nav-item active">
+      <span class="icon">🏠</span>Home
+    </a>
+    <a href="map.html" class="bottom-nav-item">
+      <span class="icon">🗺️</span>Map
+    </a>
+    <a href="scanner.html" class="bottom-nav-item">
+      <span class="icon">📷</span>Scan
+    </a>
+    <a href="report.html" class="bottom-nav-item">
+      <span class="icon">📝</span>Report
+    </a>
+    <a href="alert.html" class="bottom-nav-item">
+      <span class="icon">🚨</span>Alerts
+    </a>
+  </nav>
+
+  <script src="script.js"></script>
+  <script>
+    // Animated counting
+    function animateCount(el, target, suffix = '') {
+      let curr = 0;
+      const step = target / 60;
+      const timer = setInterval(() => {
+        curr = Math.min(curr + step, target);
+        el.textContent = Math.floor(curr).toLocaleString() + suffix;
+        if (curr >= target) clearInterval(timer);
+      }, 16);
+    }
+    setTimeout(() => {
+      animateCount(document.getElementById('stat-beaches'), 142);
+      animateCount(document.getElementById('stat-users'), 24800, '');
+      animateCount(document.getElementById('stat-reports'), 3891);
+      animateCount(document.getElementById('stat-saved'), 218);
+      document.getElementById('stat-users').textContent = '24.8K';
+    }, 800);
+  </script>
+</body>
+</html>

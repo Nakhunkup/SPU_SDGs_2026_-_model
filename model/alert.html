@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Real-time Alerts — Ocean Guardian</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        .alert-page {
+            padding: calc(var(--nav-height) + 20px) 20px 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .alert-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 24px;
+        }
+
+        @media (max-width: 800px) {
+            .alert-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Alert type colors */
+        .alert-item.danger {
+            border-left: 3px solid var(--coral);
+            background: rgba(255, 107, 107, 0.05);
+        }
+
+        .alert-item.warning {
+            border-left: 3px solid var(--amber);
+            background: rgba(255, 183, 3, 0.04);
+        }
+
+        .alert-item.info {
+            border-left: 3px solid var(--teal-bright);
+            background: rgba(0, 212, 212, 0.04);
+        }
+
+        .alert-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .alert-stat {
+            padding: 16px;
+            text-align: center;
+            border-radius: 12px;
+        }
+
+        .alert-stat-num {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .alert-stat-lbl {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-top: 2px;
+        }
+
+        /* Side panel */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-card {
+            padding: 20px;
+        }
+
+        /* Watch face */
+        .watchface-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 16px 0;
+        }
+
+        .watchface {
+            width: 130px;
+            height: 155px;
+            background: linear-gradient(160deg, #111, #0a0a0a);
+            border-radius: 28px;
+            border: 3px solid #282828;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 14px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .watchface::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 4px;
+            background: #1a1a1a;
+            border-radius: 0 0 4px 4px;
+        }
+
+        .watch-time {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: white;
+            letter-spacing: 2px;
+        }
+
+        .watch-alert {
+            font-size: 0.55rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .watch-icon {
+            font-size: 1.4rem;
+        }
+
+        .watch-vibe {
+            font-size: 0.5rem;
+            color: #555;
+        }
+
+        /* Notification toggle */
+        .notif-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .notif-row:last-child {
+            border-bottom: none;
+        }
+
+        .notif-label {
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .notif-sub {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        /* New alert animation */
+        @keyframes new-alert {
+            0% {
+                opacity: 0;
+                transform: translateY(-12px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .new-alert {
+            animation: new-alert 0.4s ease forwards;
+        }
+
+        /* Filter tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 7px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-tab:hover {
+            border-color: var(--teal-bright);
+            color: var(--teal-bright);
+        }
+
+        .filter-tab.active {
+            background: var(--teal-soft);
+            border-color: var(--teal-bright);
+            color: var(--teal-bright);
+        }
+
+        /* Beacon hint */
+        .beacon-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ocean-bg"></div>
+    <div class="particles"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">
+            <div class="nav-logo-icon">🌊</div><span class="nav-logo-text">Ocean Guardian</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="map.html">🗺️ Beach Map</a></li>
+            <li><a href="scanner.html">📷 Scanner</a></li>
+            <li><a href="report.html">📝 Report</a></li>
+            <li><a href="alert.html" class="active">🚨 Alerts</a></li>
+        </ul>
+        <div class="nav-status">
+            <div class="status-dot"></div>Monitoring Active
+        </div>
+    </nav>
+
+    <div class="alert-page">
+        <div class="section-header" style="text-align:left; margin-bottom:20px;">
+            <div class="section-tag">🚨 Real-time Alert</div>
+            <h1 class="section-title" style="font-size:2rem;">Alert Dashboard</h1>
+            <p class="section-desc" style="text-align:left; margin:0;">การแจ้งเตือนภัยชายหาดแบบ Real-time
+                ผ่านสมาร์ทโฟนและ Smart Watch</p>
+        </div>
+
+        <div class="alert-stats">
+            <div class="alert-stat glass-card">
+                <div class="alert-stat-num danger-pulse" style="color:var(--coral);" id="st-danger">3</div>
+                <div class="alert-stat-lbl">🚨 Critical Alerts</div>
+            </div>
+            <div class="alert-stat glass-card">
+                <div class="alert-stat-num" style="color:var(--amber);" id="st-warn">8</div>
+                <div class="alert-stat-lbl">⚠️ Warnings</div>
+            </div>
+            <div class="alert-stat glass-card">
+                <div class="alert-stat-num" style="color:var(--teal-bright);" id="st-info">24</div>
+                <div class="alert-stat-lbl">ℹ️ Notifications</div>
+            </div>
+        </div>
+
+        <div class="alert-layout">
+            <!-- Alert Feed -->
+            <div>
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                    <div style="font-size:1rem; font-weight:700;">📡 Live Alert Feed</div>
+                    <button class="btn btn-primary btn-sm" onclick="simulateAlert()">⚡ จำลองแจ้งเตือน</button>
+                </div>
+
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-f="all" onclick="filterAlerts(this,'all')">🌊
+                        ทั้งหมด</button>
+                    <button class="filter-tab" data-f="danger" onclick="filterAlerts(this,'danger')">🚨 อันตราย</button>
+                    <button class="filter-tab" data-f="warning" onclick="filterAlerts(this,'warning')">⚠️ ระวัง</button>
+                    <button class="filter-tab" data-f="info" onclick="filterAlerts(this,'info')">ℹ️ ข้อมูล</button>
+                </div>
+
+                <div id="alert-feed"></div>
+            </div>
+
+            <!-- Side Panel -->
+            <div class="side-panel">
+                <!-- Smart Watch Simulation -->
+                <div class="glass-card panel-card">
+                    <div
+                        style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">
+                        ⌚ Smart Watch Simulation</div>
+                    <div class="watchface-wrapper">
+                        <div class="watchface">
+                            <div class="watch-icon" id="watch-icon">🌊</div>
+                            <div class="watch-time" id="watch-time">--:--</div>
+                            <div class="watch-alert" id="watch-alert" style="color:#00d4d4;">OCEAN
+                                GUARDIAN<br>MONITORING</div>
+                            <div class="watch-vibe" id="watch-vibe">● ● ●</div>
+                        </div>
+                    </div>
+                    <div style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:8px;">กดปุ่ม
+                        "จำลองแจ้งเตือน" เพื่อดูการสั่น</div>
+                </div>
+
+                <!-- Notification Settings -->
+                <div class="glass-card panel-card">
+                    <div
+                        style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
+                        🔔 การแจ้งเตือน</div>
+                    <div class="notif-row">
+                        <div>
+                            <div class="notif-label">Browser Notifications</div>
+                            <div class="notif-sub" id="notif-status">กดเพื่อเปิดใช้งาน</div>
+                        </div>
+                        <label class="toggle-switch"><input type="checkbox" id="notif-toggle"
+                                onchange="toggleNotif(this)">
+                            <div class="toggle-slider"></div>
+                        </label>
+                    </div>
+                    <div class="notif-row">
+                        <div>
+                            <div class="notif-label">🌊 Rip Current Alerts</div>
+                            <div class="notif-sub">แจ้งเมื่อตรวจพบกระแสน้ำดูด</div>
+                        </div>
+                        <label class="toggle-switch"><input type="checkbox" checked>
+                            <div class="toggle-slider"></div>
+                        </label>
+                    </div>
+                    <div class="notif-row">
+                        <div>
+                            <div class="notif-label">🪼 Marine Animal Alerts</div>
+                            <div class="notif-sub">แจ้งเมื่อพบสัตว์อันตราย</div>
+                        </div>
+                        <label class="toggle-switch"><input type="checkbox" checked>
+                            <div class="toggle-slider"></div>
+                        </label>
+                    </div>
+                    <div class="notif-row">
+                        <div>
+                            <div class="notif-label">🌪️ Weather Warnings</div>
+                            <div class="notif-sub">แจ้งเตือนพายุและคลื่นสูง</div>
+                        </div>
+                        <label class="toggle-switch"><input type="checkbox" checked>
+                            <div class="toggle-slider"></div>
+                        </label>
+                    </div>
+                    <div class="notif-row">
+                        <div>
+                            <div class="notif-label">♻️ Community Reports</div>
+                            <div class="notif-sub">รายงานจากชุมชนใกล้คุณ</div>
+                        </div>
+                        <label class="toggle-switch"><input type="checkbox">
+                            <div class="toggle-slider"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Emergency Numbers -->
+                <div class="glass-card panel-card"
+                    style="background:rgba(255,107,107,0.05); border-color:rgba(255,107,107,0.2);">
+                    <div
+                        style="font-size:0.85rem; font-weight:700; color:var(--coral); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">
+                        📞 เบอร์ฉุกเฉิน</div>
+                    <div style="display:flex;flex-direction:column;gap:10px; font-size:0.88rem;">
+                        <div style="display:flex;justify-content:space-between;"><span>🚑 Emergency</span><a
+                                href="tel:1669"
+                                style="color:var(--coral);font-weight:700;text-decoration:none;">1669</a></div>
+                        <div style="display:flex;justify-content:space-between;"><span>⛵ Maritime</span><a
+                                href="tel:1196"
+                                style="color:var(--coral);font-weight:700;text-decoration:none;">1196</a></div>
+                        <div style="display:flex;justify-content:space-between;"><span>🏖️ Lifeguard</span><a
+                                href="tel:076340111"
+                                style="color:var(--coral);font-weight:700;text-decoration:none;">076-340-111</a></div>
+                        <div style="display:flex;justify-content:space-between;"><span>🌊 Tsunami</span><a
+                                href="tel:1784"
+                                style="color:var(--coral);font-weight:700;text-decoration:none;">1784</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="index.html" class="bottom-nav-item"><span class="icon">🏠</span>Home</a>
+        <a href="map.html" class="bottom-nav-item"><span class="icon">🗺️</span>Map</a>
+        <a href="scanner.html" class="bottom-nav-item"><span class="icon">📷</span>Scan</a>
+        <a href="report.html" class="bottom-nav-item"><span class="icon">📝</span>Report</a>
+        <a href="alert.html" class="bottom-nav-item active"><span class="icon">🚨</span>Alerts</a>
+    </nav>
+
+    <script src="script.js"></script>
+    <script>
+        let currentFilter = 'all';
+        let allAlerts = [...ALERTS_DATA];
+
+        function renderAlerts() {
+            const feed = document.getElementById('alert-feed');
+            const filtered = currentFilter === 'all' ? allAlerts : allAlerts.filter(a => a.type === currentFilter);
+            feed.innerHTML = '';
+            filtered.forEach((a, i) => {
+                const div = document.createElement('div');
+                div.className = `alert-item ${a.type}${i === 0 ? ' new-alert' : ''}`;
+                div.innerHTML = `
+          <div class="alert-icon">${a.icon}</div>
+          <div class="alert-content">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+              <div class="alert-title">${a.title}</div>
+              <span class="badge badge-${a.type === 'danger' ? 'danger' : a.type === 'warning' ? 'warning' : 'info'}" style="flex-shrink:0;">${a.type.toUpperCase()}</span>
+            </div>
+            <div class="alert-desc">${a.desc}</div>
+            <div style="display:flex;gap:12px;align-items:center;margin-top:6px;">
+              <div class="alert-time">🕐 ${a.time}</div>
+              <div class="alert-time">📍 ${a.location}</div>
+            </div>
+          </div>`;
+                feed.appendChild(div);
+            });
+        }
+
+        function filterAlerts(btn, filter) {
+            document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = filter;
+            renderAlerts();
+        }
+
+        // Update watch clock
+        function updateWatch() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('watch-time').textContent = `${h}:${m}`;
+        }
+        setInterval(updateWatch, 1000);
+        updateWatch();
+
+        // Simulate new alert
+        const SIM_ALERTS = [
+            { type: 'danger', icon: '🌊', title: 'Rip Current — Karon Beach', desc: 'กระแสน้ำดูดเพิ่งตรวจพบ! ห้ามลงน้ำทันที', time: 'Just now', location: 'Karon, Phuket' },
+            { type: 'warning', icon: '🪼', title: 'Jellyfish Alert — Kata Beach', desc: 'ฝูงแมงกะพรุนกล่องพบใกล้ฝั่ง ระวังบริเวณน้ำตื้น', time: 'Just now', location: 'Kata, Phuket' },
+            { type: 'danger', icon: '⛈️', title: 'Sudden Storm — Chaweng', desc: 'พายุเข้าถึงหาดกำลัง 30 นาที ให้ออกจากน้ำทันที', time: 'Just now', location: 'Chaweng, Koh Samui' },
+            { type: 'info', icon: '🐢', title: 'Turtle Nesting — Nai Yang', desc: 'เต่ากระกำลังวางไข่ รักษาระยะห่าง 10 เมตร', time: 'Just now', location: 'Nai Yang, Phuket' },
+        ];
+
+        let simIdx = 0;
+        function simulateAlert() {
+            const alert = SIM_ALERTS[simIdx % SIM_ALERTS.length];
+            simIdx++;
+            allAlerts.unshift(alert);
+            renderAlerts();
+
+            // Watch vibrate effect
+            const watchAlert = document.getElementById('watch-alert');
+            const watchIcon = document.getElementById('watch-icon');
+            const watchVibe = document.getElementById('watch-vibe');
+            watchIcon.textContent = alert.icon;
+            watchAlert.style.color = alert.type === 'danger' ? '#ff6b6b' : alert.type === 'warning' ? '#ffb703' : '#00d4d4';
+            watchAlert.textContent = alert.type.toUpperCase() + '\n' + alert.title.substring(0, 20);
+            watchVibe.style.color = alert.type === 'danger' ? '#ff6b6b' : '#555';
+            watchVibe.textContent = '▶ ▶ ▶ VIBRATING';
+            setTimeout(() => { watchVibe.textContent = '● ● ●'; watchVibe.style.color = '#555'; }, 2000);
+
+            // Browser notification
+            sendNotification('🌊 Ocean Guardian: ' + alert.title, alert.desc);
+            showToast(`🚨 แจ้งเตือนใหม่: ${alert.title}`, alert.type === 'danger' ? 'error' : 'warning');
+
+            // Update counters
+            if (alert.type === 'danger') document.getElementById('st-danger').textContent = parseInt(document.getElementById('st-danger').textContent) + 1;
+            else if (alert.type === 'warning') document.getElementById('st-warn').textContent = parseInt(document.getElementById('st-warn').textContent) + 1;
+            else document.getElementById('st-info').textContent = parseInt(document.getElementById('st-info').textContent) + 1;
+        }
+
+        async function toggleNotif(checkbox) {
+            if (checkbox.checked) {
+                const perm = await requestNotificationPermission();
+                if (perm === 'granted') {
+                    document.getElementById('notif-status').textContent = '✅ เปิดใช้งานแล้ว';
+                    showToast('🔔 เปิดการแจ้งเตือนสำเร็จ!', 'success');
+                    sendNotification('🌊 Ocean Guardian', 'เปิดการแจ้งเตือนภัยชายหาดสำเร็จแล้ว!');
+                } else {
+                    checkbox.checked = false;
+                    document.getElementById('notif-status').textContent = 'ถูกปิดโดยเบราว์เซอร์';
+                    showToast('❌ กรุณาอนุญาตการแจ้งเตือนในเบราว์เซอร์', 'error');
+                }
+            } else {
+                document.getElementById('notif-status').textContent = 'กดเพื่อเปิดใช้งาน';
+            }
+        }
+
+        // Auto refresh every 30 seconds (simulated)
+        setInterval(() => {
+            if (Math.random() < 0.3) simulateAlert();
+        }, 30000);
+
+        renderAlerts();
+    </script>
+</body>
+
+</html>

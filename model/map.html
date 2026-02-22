@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Beach Map — Ocean Guardian</title>
+    <meta name="description" content="แผนที่ชายหาดแบบ Real-time ตรวจสอบจุดเสี่ยง Rip Current และความปลอดภัย" />
+    <link rel="stylesheet" href="style.css" />
+    <!-- Leaflet.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            padding-bottom: var(--bottom-nav);
+        }
+
+        .map-layout {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 0;
+            height: calc(100vh - var(--nav-height));
+            margin-top: var(--nav-height);
+        }
+
+        @media (max-width: 900px) {
+            .map-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 320px;
+                height: auto;
+            }
+
+            .map-sidebar {
+                order: 2;
+                overflow-y: auto;
+                max-height: 50vh;
+            }
+
+            #map {
+                order: 1;
+                height: 50vh;
+            }
+        }
+
+        .map-sidebar {
+            background: var(--ocean-mid);
+            border-right: 1px solid var(--glass-border);
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        #map {
+            flex: 1;
+            height: 100%;
+            min-height: 400px;
+        }
+
+        @media (min-width: 901px) {
+            #map {
+                height: calc(100vh - var(--nav-height));
+            }
+        }
+
+        /* Sidebar components */
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .weather-cell {
+            background: rgba(2, 13, 26, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .weather-icon {
+            font-size: 1.6rem;
+        }
+
+        .weather-val {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--teal-bright);
+            margin: 4px 0;
+        }
+
+        .weather-lbl {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .beach-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .beach-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid var(--glass-border);
+            background: rgba(2, 13, 26, 0.3);
+            transition: var(--transition);
+        }
+
+        .beach-item:hover {
+            border-color: var(--teal-bright);
+            background: var(--teal-soft);
+        }
+
+        .beach-item.selected {
+            border-color: var(--teal-bright);
+            background: rgba(0, 212, 212, 0.1);
+        }
+
+        .beach-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .beach-info {
+            flex: 1;
+        }
+
+        .beach-name {
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .beach-detail {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .rip-warning {
+            background: rgba(255, 107, 107, 0.08);
+            border: 1px solid rgba(255, 107, 107, 0.25);
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .rip-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--coral);
+            margin-bottom: 8px;
+        }
+
+        .rip-tip {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Map legend */
+        .map-overlay-legend {
+            position: absolute;
+            bottom: 80px;
+            right: 16px;
+            z-index: 500;
+            background: rgba(2, 13, 26, 0.9);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px;
+            backdrop-filter: blur(10px);
+        }
+
+        .map-overlay-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        /* Safety meter */
+        .safety-meter {
+            background: rgba(2, 13, 26, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .safety-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .safety-level {
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .safety-bar {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ocean-bg"></div>
+    <div class="particles"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">
+            <div class="nav-logo-icon">🌊</div>
+            <span class="nav-logo-text">Ocean Guardian</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="map.html" class="active">🗺️ Beach Map</a></li>
+            <li><a href="scanner.html">📷 Scanner</a></li>
+            <li><a href="report.html">📝 Report</a></li>
+            <li><a href="alert.html">🚨 Alerts</a></li>
+        </ul>
+        <div class="nav-status">
+            <div class="status-dot"></div>Live · Updated 2m ago
+        </div>
+    </nav>
+
+    <div class="map-layout">
+        <!-- SIDEBAR -->
+        <div class="map-sidebar">
+            <div>
+                <div class="sidebar-title">🗺️ Live Beach Map</div>
+                <div class="sidebar-subtitle">อัปเดต Real-time ทุก 5 นาที</div>
+            </div>
+
+            <!-- Safety Level -->
+            <div class="safety-meter">
+                <div class="safety-label">Overall Conditions</div>
+                <div class="safety-level" id="overall-safety" style="color:var(--amber)">⚠️ Mixed Conditions</div>
+                <div class="safety-bar progress-bar">
+                    <div class="progress-fill" id="safety-fill" style="width:55%; background:var(--amber);"></div>
+                </div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:8px;">3 หาดปลอดภัย · 2 ระวัง · 1
+                    อันตราย</div>
+            </div>
+
+            <!-- Weather -->
+            <div>
+                <div class="sidebar-subtitle" style="margin-bottom:10px;">📡 สภาพอากาศทะเลวันนี้</div>
+                <div class="weather-grid">
+                    <div class="weather-cell">
+                        <div class="weather-icon">🌊</div>
+                        <div class="weather-val" id="wv-wave">1.2m</div>
+                        <div class="weather-lbl">Wave Height</div>
+                    </div>
+                    <div class="weather-cell">
+                        <div class="weather-icon">💨</div>
+                        <div class="weather-val" id="wv-wind">15km/h</div>
+                        <div class="weather-lbl">Wind Speed</div>
+                    </div>
+                    <div class="weather-cell">
+                        <div class="weather-icon">☀️</div>
+                        <div class="weather-val" id="wv-uv">UV 9</div>
+                        <div class="weather-lbl">UV Index</div>
+                    </div>
+                    <div class="weather-cell">
+                        <div class="weather-icon">🌡️</div>
+                        <div class="weather-val" id="wv-temp">28°C</div>
+                        <div class="weather-lbl">Water Temp</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Beach List -->
+            <div>
+                <div class="sidebar-subtitle" style="margin-bottom:10px;">🏖️ ชายหาดที่ติดตาม</div>
+                <div class="beach-list" id="beach-list"></div>
+            </div>
+
+            <!-- Rip Current Guide -->
+            <div class="rip-warning">
+                <div class="rip-title">⚡ วิธีหนีกระแสน้ำดูด (Rip Current)</div>
+                <div class="rip-tip">
+                    🔴 <strong>อย่าว่ายสวนกระแส</strong> — จะหมดแรง<br>
+                    ✅ ว่ายขนานกับชายหาดจนพ้นกระแส<br>
+                    ✅ ลอยตัวและโบกมือขอความช่วยเหลือ<br>
+                    📞 โทร 1669 หรือแจ้งเจ้าหน้าที่ทันที
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div>
+                <div class="sidebar-subtitle" style="margin-bottom:10px;">📊 คำอธิบายสี</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:rgba(0,230,118,0.6);"></div>Safe — ปลอดภัย
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:rgba(255,183,3,0.6);"></div>Caution — ระวัง
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:rgba(255,107,107,0.6);"></div>Danger — อันตราย
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:rgba(100,100,255,0.5);"></div>Rip Current Zone
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAP -->
+        <div id="map"></div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="bottom-nav-item"><span class="icon">🏠</span>Home</a>
+        <a href="map.html" class="bottom-nav-item active"><span class="icon">🗺️</span>Map</a>
+        <a href="scanner.html" class="bottom-nav-item"><span class="icon">📷</span>Scan</a>
+        <a href="report.html" class="bottom-nav-item"><span class="icon">📝</span>Report</a>
+        <a href="alert.html" class="bottom-nav-item"><span class="icon">🚨</span>Alerts</a>
+    </nav>
+
+    <script src="script.js"></script>
+    <script>
+        // Initialize Leaflet Map
+        const map = L.map('map', {
+            center: [7.8, 98.3],
+            zoom: 8,
+            zoomControl: true,
+        });
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CARTO',
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Beach data with coordinates
+        const beaches = [
+            { name: 'Phuket - Patong', lat: 7.897, lng: 98.296, safety: 'warning', wave: 1.8, wind: 18, uv: 9, rip: 'Moderate', zone: [[7.90, 98.29], [7.90, 98.31], [7.88, 98.31], [7.88, 98.29]] },
+            { name: 'Phuket - Kata', lat: 7.820, lng: 98.300, safety: 'safe', wave: 0.8, wind: 10, uv: 8, rip: 'Low', zone: [[7.83, 98.295], [7.83, 98.308], [7.81, 98.308], [7.81, 98.295]] },
+            { name: 'Koh Samui - Chaweng', lat: 9.534, lng: 100.057, safety: 'danger', wave: 2.5, wind: 28, uv: 7, rip: 'High', zone: [[9.55, 100.045], [9.55, 100.07], [9.52, 100.07], [9.52, 100.045]] },
+            { name: 'Koh Chang - White Sand', lat: 12.110, lng: 102.290, safety: 'safe', wave: 0.6, wind: 8, uv: 6, rip: 'Low', zone: [[12.12, 102.28], [12.12, 102.3], [12.10, 102.3], [12.10, 102.28]] },
+            { name: 'Krabi - Ao Nang', lat: 8.033, lng: 98.833, safety: 'warning', wave: 1.4, wind: 15, uv: 9, rip: 'Moderate', zone: [[8.04, 98.825], [8.04, 98.845], [8.025, 98.845], [8.025, 98.825]] },
+            { name: 'Hua Hin Beach', lat: 12.573, lng: 99.957, safety: 'safe', wave: 0.5, wind: 12, uv: 8, rip: 'Low', zone: [[12.58, 99.95], [12.58, 99.965], [12.565, 99.965], [12.565, 99.95]] },
+        ];
+
+        const safetyColors = { safe: '#00e676', warning: '#ffb703', danger: '#ff6b6b' };
+        const safetyLabels = { safe: '✅ SAFE', warning: '⚠️ CAUTION', danger: '🚨 DANGER' };
+
+        const markers = [];
+
+        beaches.forEach((b, i) => {
+            const color = safetyColors[b.safety];
+
+            // Danger zone polygon with rip current
+            const zoneColor = b.safety === 'danger' ? '#6666ff' : b.safety === 'warning' ? '#ffb70380' : '#00e67640';
+            L.polygon(b.zone, {
+                color: color,
+                fillColor: b.safety === 'danger' ? '#6666ff' : color,
+                fillOpacity: 0.2,
+                weight: 1.5,
+                dashArray: b.safety === 'safe' ? null : '6,4',
+            }).addTo(map);
+
+            // Custom marker
+            const icon = L.divIcon({
+                html: `<div style="
+          width:38px; height:38px;
+          background:${color}22;
+          border:2px solid ${color};
+          border-radius:50%;
+          display:flex; align-items:center; justify-content:center;
+          font-size:16px;
+          box-shadow: 0 0 12px ${color}66;
+        ">🏖️</div>`,
+                className: '',
+                iconSize: [38, 38],
+                iconAnchor: [19, 19],
+            });
+
+            const marker = L.marker([b.lat, b.lng], { icon }).addTo(map);
+            const popupHtml = `
+        <div style="font-family:Outfit,sans-serif; min-width:200px;">
+          <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">${b.name}</div>
+          <div style="font-size:0.8rem; color:${color}; font-weight:700; margin-bottom:10px;">${safetyLabels[b.safety]}</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.78rem;">
+            <div>🌊 Wave: <b>${b.wave}m</b></div>
+            <div>💨 Wind: <b>${b.wind}km/h</b></div>
+            <div>☀️ UV: <b>${b.uv}</b></div>
+            <div>⚡ Rip: <b>${b.rip}</b></div>
+          </div>
+          <div style="margin-top:10px; font-size:0.72rem; color:#8ab8cc;">คลิกเพื่อดูรายละเอียดชายหาด</div>
+        </div>`;
+            marker.bindPopup(popupHtml, { maxWidth: 280 });
+            markers.push(marker);
+        });
+
+        // Build beach list sidebar
+        const beachList = document.getElementById('beach-list');
+        beaches.forEach((b, i) => {
+            const div = document.createElement('div');
+            div.className = 'beach-item';
+            div.innerHTML = `
+        <div class="beach-dot" style="background:${safetyColors[b.safety]};"></div>
+        <div class="beach-info">
+          <div class="beach-name">${b.name}</div>
+          <div class="beach-detail">🌊 ${b.wave}m &nbsp; 💨 ${b.wind}km/h &nbsp; ⚡ ${b.rip}</div>
+        </div>
+        <span class="badge badge-${b.safety === 'safe' ? 'safe' : b.safety === 'warning' ? 'warning' : 'danger'}">${b.safety.toUpperCase()}</span>
+      `;
+            div.addEventListener('click', () => {
+                document.querySelectorAll('.beach-item').forEach(el => el.classList.remove('selected'));
+                div.classList.add('selected');
+                map.setView([b.lat, b.lng], 13, { animate: true });
+                markers[i].openPopup();
+            });
+            beachList.appendChild(div);
+        });
+
+        // Simulate live data update
+        setInterval(() => {
+            const wave = (Math.random() * 2 + 0.4).toFixed(1);
+            const wind = Math.floor(Math.random() * 20 + 5);
+            document.getElementById('wv-wave').textContent = wave + 'm';
+            document.getElementById('wv-wind').textContent = wind + 'km/h';
+        }, 8000);
+    </script>
+</body>
+
+</html>

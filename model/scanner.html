@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Marine Scanner — Ocean Guardian</title>
+    <meta name="description" content="สแกนสัตว์ทะเลด้วย AI เพื่อระบุสายพันธุ์และคำแนะนำปฐมพยาบาล" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        .scanner-page {
+            padding: calc(var(--nav-height) + 20px) 20px 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .scanner-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 700px) {
+            .scanner-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Camera viewfinder */
+        .viewfinder {
+            position: relative;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+            border: 2px solid var(--glass-border);
+            box-shadow: 0 0 40px rgba(0, 212, 212, 0.1);
+        }
+
+        #camera-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .camera-placeholder-icon {
+            font-size: 4rem;
+        }
+
+        .viewfinder-corners {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .corner {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-color: var(--teal-bright);
+            border-style: solid;
+        }
+
+        .corner-tl {
+            top: 12px;
+            left: 12px;
+            border-width: 2px 0 0 2px;
+        }
+
+        .corner-tr {
+            top: 12px;
+            right: 12px;
+            border-width: 2px 2px 0 0;
+        }
+
+        .corner-bl {
+            bottom: 12px;
+            left: 12px;
+            border-width: 0 0 2px 2px;
+        }
+
+        .corner-br {
+            bottom: 12px;
+            right: 12px;
+            border-width: 0 2px 2px 0;
+        }
+
+        .scan-line {
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--teal-bright), transparent);
+            animation: scan-move 2.5s linear infinite;
+            opacity: 0;
+        }
+
+        .scan-line.active {
+            opacity: 1;
+        }
+
+        .camera-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(6px);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--teal-bright);
+        }
+
+        .scanning-badge {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 212, 212, 0.15);
+            border: 1px solid var(--teal-bright);
+            backdrop-filter: blur(6px);
+            border-radius: 20px;
+            padding: 6px 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--teal-bright);
+            display: none;
+        }
+
+        .scanning-badge.active {
+            display: block;
+            animation: pulse-green 1.5s infinite;
+        }
+
+        /* Controls */
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .upload-area:hover {
+            border-color: var(--teal-bright);
+            color: var(--teal-bright);
+        }
+
+        /* Result panel */
+        .result-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .result-placeholder {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-muted);
+            gap: 12px;
+            padding: 40px 20px;
+        }
+
+        .result-placeholder-icon {
+            font-size: 3rem;
+            opacity: 0.5;
+        }
+
+        .result-content {
+            display: none;
+        }
+
+        .result-content.visible {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .species-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .species-emoji-big {
+            font-size: 3.5rem;
+        }
+
+        .species-name-th {
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .species-name-en {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .danger-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .danger-HIGH,
+        .danger-CRITICAL {
+            background: rgba(255, 107, 107, 0.15);
+            color: var(--coral);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .danger-MEDIUM {
+            background: var(--amber-soft);
+            color: var(--amber);
+            border: 1px solid rgba(255, 183, 3, 0.3);
+        }
+
+        .danger-SAFE {
+            background: var(--green-soft);
+            color: var(--green-safe);
+            border: 1px solid rgba(0, 230, 118, 0.3);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .info-cell {
+            background: rgba(2, 13, 26, 0.5);
+            border: 1px solid var(--glass-border);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .info-cell-lbl {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+
+        .info-cell-val {
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .firstaid-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .firstaid-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            padding: 8px;
+            background: rgba(2, 13, 26, 0.3);
+            border-radius: 8px;
+        }
+
+        .step-num-circle {
+            width: 22px;
+            height: 22px;
+            background: var(--teal-soft);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--teal-bright);
+            flex-shrink: 0;
+        }
+
+        /* Species Grid */
+        .species-section {
+            margin-top: 40px;
+        }
+
+        .species-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .species-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .species-card {
+            padding: 16px 12px;
+            border-radius: 14px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            transition: var(--transition);
+        }
+
+        .species-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--teal-bright);
+        }
+
+        .species-card.selected {
+            border-color: var(--teal-bright);
+            background: rgba(0, 212, 212, 0.08);
+            box-shadow: 0 0 20px var(--teal-soft);
+        }
+
+        .species-card .emoji {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .species-card .name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .species-card .danger-badge {
+            font-size: 0.62rem;
+            font-weight: 700;
+            margin-top: 6px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .confidence-bar {
+            margin-top: 8px;
+        }
+
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ocean-bg"></div>
+    <div class="particles"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">
+            <div class="nav-logo-icon">🌊</div>
+            <span class="nav-logo-text">Ocean Guardian</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="map.html">🗺️ Beach Map</a></li>
+            <li><a href="scanner.html" class="active">📷 Scanner</a></li>
+            <li><a href="report.html">📝 Report</a></li>
+            <li><a href="alert.html">🚨 Alerts</a></li>
+        </ul>
+        <div class="nav-status">
+            <div class="status-dot"></div>AI Ready
+        </div>
+    </nav>
+
+    <div class="scanner-page">
+        <div class="section-header" style="text-align:left; margin-bottom:24px;">
+            <div class="section-tag">📷 Scan & Protect</div>
+            <h1 class="section-title" style="font-size:2rem;">AI Marine Scanner</h1>
+            <p class="section-desc" style="text-align:left; margin:0;">สแกนสัตว์ทะเลเพื่อระบุสายพันธุ์ ระดับอันตราย
+                และวิธีปฐมพยาบาลเฉพาะสายพันธุ์</p>
+        </div>
+
+        <div class="scanner-layout">
+            <!-- Camera Section -->
+            <div>
+                <div class="viewfinder">
+                    <video id="camera-video" autoplay playsinline muted style="display:none;"></video>
+                    <div class="camera-overlay" id="camera-placeholder-overlay">
+                        <div class="camera-placeholder">
+                            <div class="camera-placeholder-icon">📷</div>
+                            <div>เปิดกล้องเพื่อสแกนสัตว์ทะเล<br>หรืออัปโหลดภาพถ่าย</div>
+                        </div>
+                    </div>
+                    <!-- Scanning overlay (shown when camera active) -->
+                    <div class="viewfinder-corners">
+                        <div class="corner corner-tl"></div>
+                        <div class="corner corner-tr"></div>
+                        <div class="corner corner-bl"></div>
+                        <div class="corner corner-br"></div>
+                    </div>
+                    <div class="scan-line" id="scan-line"></div>
+                    <div class="camera-badge" id="camera-badge" style="display:none;">🔴 LIVE</div>
+                    <div class="scanning-badge" id="scanning-badge">🔍 กำลังวิเคราะห์...</div>
+                </div>
+
+                <div class="camera-controls">
+                    <button class="btn btn-primary" id="start-cam-btn">📷 เปิดกล้อง</button>
+                    <button class="btn btn-secondary" id="capture-btn" disabled>🔍 สแกน</button>
+                    <button class="btn btn-secondary btn-sm" id="stop-cam-btn" style="display:none;">⏹</button>
+                </div>
+
+                <div class="upload-area" style="margin-top:12px;"
+                    onclick="document.getElementById('file-upload').click()">
+                    📂 อัปโหลดรูปภาพ (JPG, PNG)
+                    <input type="file" id="file-upload" accept="image/*" style="display:none;" />
+                </div>
+            </div>
+
+            <!-- Result Panel -->
+            <div class="result-panel">
+                <div
+                    style="font-size:0.9rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px;">
+                    🤖 ผลการวิเคราะห์ AI</div>
+
+                <div class="result-placeholder" id="result-placeholder">
+                    <div class="result-placeholder-icon">🐠</div>
+                    <div style="font-size:0.9rem;">กดสแกนหรือเลือกสายพันธุ์ด้านล่าง<br>เพื่อดูข้อมูลและวิธีปฐมพยาบาล
+                    </div>
+                </div>
+
+                <div class="result-content" id="result-content">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Species Cards -->
+        <div class="species-section">
+            <div class="section-tag" style="margin-bottom:16px;">🐠 รายการสัตว์ทะเล — คลิกเพื่อดูข้อมูล</div>
+            <div class="species-grid" id="species-grid"></div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="bottom-nav-item"><span class="icon">🏠</span>Home</a>
+        <a href="map.html" class="bottom-nav-item"><span class="icon">🗺️</span>Map</a>
+        <a href="scanner.html" class="bottom-nav-item active"><span class="icon">📷</span>Scan</a>
+        <a href="report.html" class="bottom-nav-item"><span class="icon">📝</span>Report</a>
+        <a href="alert.html" class="bottom-nav-item"><span class="icon">🚨</span>Alerts</a>
+    </nav>
+
+    <script src="script.js"></script>
+    <script>
+        let cameraStream = null;
+
+        // Build species grid
+        const grid = document.getElementById('species-grid');
+        MARINE_SPECIES.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'species-card';
+            const dangerColor = s.danger === 'SAFE' ? '#00e676' : s.danger === 'MEDIUM' ? '#ffb703' : '#ff6b6b';
+            card.innerHTML = `
+        <span class="emoji">${s.emoji}</span>
+        <div class="name">${s.nameTh}</div>
+        <div class="danger-badge" style="background:${dangerColor}20; color:${dangerColor};">${s.danger}</div>
+      `;
+            card.addEventListener('click', () => showSpecies(s, card));
+            grid.appendChild(card);
+        });
+
+        function showSpecies(s, cardEl) {
+            document.querySelectorAll('.species-card').forEach(c => c.classList.remove('selected'));
+            if (cardEl) cardEl.classList.add('selected');
+
+            const confidence = Math.floor(Math.random() * 15 + 82);
+            const dangerColor = s.danger === 'SAFE' ? '#00e676' : s.danger === 'MEDIUM' ? '#ffb703' : '#ff6b6b';
+            const firstAidHTML = s.firstAid.map((step, i) => `
+        <div class="firstaid-step">
+          <div class="step-num-circle">${i + 1}</div>
+          <div>${step}</div>
+        </div>`).join('');
+
+            document.getElementById('result-placeholder').style.display = 'none';
+            const content = document.getElementById('result-content');
+            content.className = 'result-content visible';
+            content.innerHTML = `
+        <div class="species-header">
+          <div class="species-emoji-big">${s.emoji}</div>
+          <div>
+            <div class="species-name-th">${s.nameTh}</div>
+            <div class="species-name-en">${s.name}</div>
+          </div>
+        </div>
+
+        <div class="danger-indicator danger-${s.danger}">
+          ${s.danger === 'CRITICAL' ? '☠️' : s.danger === 'HIGH' ? '⚠️' : s.danger === 'MEDIUM' ? '⚡' : '✅'}
+          Danger: ${s.danger}
+        </div>
+
+        <div class="confidence-bar">
+          <div class="confidence-label"><span>🤖 ความมั่นใจ AI</span><span style="color:${dangerColor}">${confidence}%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${confidence}%; background:${dangerColor};"></div></div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-cell"><div class="info-cell-lbl">ถิ่นที่อยู่</div><div class="info-cell-val">${s.habitat}</div></div>
+          <div class="info-cell"><div class="info-cell-lbl">คำอธิบาย</div><div class="info-cell-val">${s.desc}</div></div>
+        </div>
+
+        <div>
+          <div style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🩺 วิธีปฐมพยาบาล</div>
+          <div class="firstaid-steps">${firstAidHTML}</div>
+        </div>
+        ${s.danger === 'CRITICAL' ? `<div style="background:rgba(255,107,107,0.1); border:1px solid rgba(255,107,107,0.3); border-radius:10px; padding:12px; font-size:0.82rem; color:var(--coral);"><strong>🚨 ฉุกเฉิน!</strong> โทร 1669 ทันที</div>` : ''}
+      `;
+        }
+
+        // Camera
+        document.getElementById('start-cam-btn').addEventListener('click', async () => {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+                const video = document.getElementById('camera-video');
+                video.srcObject = cameraStream;
+                video.style.display = 'block';
+                document.getElementById('camera-placeholder-overlay').style.display = 'none';
+                document.getElementById('camera-badge').style.display = 'block';
+                document.getElementById('scan-line').classList.add('active');
+                document.getElementById('start-cam-btn').style.display = 'none';
+                document.getElementById('stop-cam-btn').style.display = 'inline-flex';
+                document.getElementById('capture-btn').disabled = false;
+                showToast('📷 เปิดกล้องสำเร็จ', 'success');
+            } catch (e) {
+                showToast('❌ ไม่สามารถเปิดกล้องได้ใช้การอัปโหลดรูปแทน', 'error');
+            }
+        });
+
+        document.getElementById('stop-cam-btn').addEventListener('click', () => {
+            if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+            document.getElementById('camera-video').style.display = 'none';
+            document.getElementById('camera-placeholder-overlay').style.display = 'flex';
+            document.getElementById('camera-badge').style.display = 'none';
+            document.getElementById('scan-line').classList.remove('active');
+            document.getElementById('start-cam-btn').style.display = 'inline-flex';
+            document.getElementById('stop-cam-btn').style.display = 'none';
+            document.getElementById('capture-btn').disabled = true;
+        });
+
+        document.getElementById('capture-btn').addEventListener('click', () => {
+            const badge = document.getElementById('scanning-badge');
+            badge.classList.add('active');
+            showToast('🔍 กำลังวิเคราะห์ภาพ...', 'info');
+            setTimeout(() => {
+                badge.classList.remove('active');
+                const random = MARINE_SPECIES[Math.floor(Math.random() * MARINE_SPECIES.length)];
+                const cards = document.querySelectorAll('.species-card');
+                showSpecies(random, cards[MARINE_SPECIES.indexOf(random)]);
+                showToast(`✅ พบ: ${random.nameTh}`, 'success');
+            }, 2200);
+        });
+
+        document.getElementById('file-upload').addEventListener('change', (e) => {
+            if (!e.target.files[0]) return;
+            showToast('🔍 กำลังวิเคราะห์รูป...', 'info');
+            setTimeout(() => {
+                const random = MARINE_SPECIES[Math.floor(Math.random() * MARINE_SPECIES.length)];
+                const cards = document.querySelectorAll('.species-card');
+                showSpecies(random, cards[MARINE_SPECIES.indexOf(random)]);
+                showToast(`✅ พบ: ${random.nameTh}`, 'success');
+            }, 1800);
+        });
+    </script>
+</body>
+
+</html>
